@@ -85,6 +85,9 @@ int main() {
             case 2:
                 displayStudents(database);
                 break;
+            case 3:
+                displayStudentsAlphabetically(database);
+                break;
             case 0:
                 cout << "Выход из программы.\n";
                 break;
