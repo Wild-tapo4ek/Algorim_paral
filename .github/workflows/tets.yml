@@ -1,0 +1,91 @@
+name: C/C++ CI with Coverage
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake libgtest-dev googletest
+
+    - name: Build project
+      run: |
+        mkdir -p build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Debug
+        make
+
+    - name: Run tests with coverage
+      run: |
+        cd build
+      
+        g++ --coverage -g -O0 -fprofile-arcs -ftest-coverage -I/usr/include/gtest \
+            ../test_fun.cpp -lgtest -lgtest_main -lpthread -o test_runner
+        
+  
+        ./test_runner
+        
+      
+        gcovr --xml cover.xml --root ..
+
+    - name: Generate coverage report
+      uses: irongut/CodeCoverageSummary@v1.3.0
+      with:
+        filename: build/cover.xml
+        badge: true
+        fail_below_min: false
+        format: markdown
+        output: both
+        thresholds: '70 90'
+
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: build/cover.xml
+
+    - name: Create coverage badge
+      run: |
+        COVERAGE=$(grep -oP 'line-rate="\K[0-9.]+' build/cover.xml | head -1)
+        COVERAGE_PERCENT=$(echo "scale=0; $COVERAGE * 100 / 1" | bc)
+        
+        # Определяем цвет
+        if (( $(echo "$COVERAGE_PERCENT >= 90" | bc -l) )); then
+            COLOR="brightgreen"
+        elif (( $(echo "$COVERAGE_PERCENT >= 70" | bc -l) )); then
+            COLOR="green"
+        elif (( $(echo "$COVERAGE_PERCENT >= 50" | bc -l) )); then
+            COLOR="yellow"
+        else
+            COLOR="red"
+        fi
+        
+        echo "COVERAGE=$COVERAGE_PERCENT%" >> $GITHUB_ENV
+        echo "COLOR=$COLOR" >> $GITHUB_ENV
+
+    - name: Update coverage badge
+      uses: schneegans/dynamic-badges-action@v1.7.0
+      with:
+        auth: ${{ secrets.GIST_SECRET }}
+        gistID: 0c003749b19fd7227ff75c6d31ad37e5
+        filename: cover.json
+        label: Test Coverage
+        message: ${{ env.COVERAGE }}
+        color: ${{ env.COLOR }}
+
+    - name: Comment PR with coverage
+      if: github.event_name == 'pull_request'
+      uses: marocchino/sticky-pull-request-comment@v2
+      with:
+        path: code-coverage-results.md
