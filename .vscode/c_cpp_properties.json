@@ -4,7 +4,9 @@
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/**",
-                "${vcpkgRoot}/x64-windows/include"
+                "${vcpkgRoot}/x64-windows/include",
+                "${workspaceFolder}/gtest",
+                "D:/Paral_alg/vcpkg/installed/x64-windows/include/gtest"
             ],
             "defines": [
                 "_DEBUG",

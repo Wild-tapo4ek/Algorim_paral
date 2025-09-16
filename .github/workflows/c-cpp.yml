@@ -1,4 +1,4 @@
-name: C/C++ Tests
+name: C/C++ CI
 
 on:
   push:
@@ -18,3 +18,16 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y build-essential cmake libgtest-dev
+    
+    - name: Build GoogleTest
+      run: |
+        cd /usr/src/googletest
+        sudo cmake .
+        sudo make
+        sudo cp -v *.a /usr/lib || true
+    - name: Compile tests
+      run: |
+        g++ -std=c++17 tests.cpp -pthread -lgtest -lgtest_main -o tests
+    - name: Run tests
+      run: |
+        ./tests

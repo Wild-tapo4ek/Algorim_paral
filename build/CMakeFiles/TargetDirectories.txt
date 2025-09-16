@@ -1,0 +1,3 @@
+D:/Paral_alg/lab1/Algorim_paral/build/CMakeFiles/test_runner.dir
+D:/Paral_alg/lab1/Algorim_paral/build/CMakeFiles/ALL_BUILD.dir
+D:/Paral_alg/lab1/Algorim_paral/build/CMakeFiles/ZERO_CHECK.dir

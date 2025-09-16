@@ -1,0 +1,10 @@
+^D:\PARAL_ALG\LAB1\ALGORIM_PARAL\BUILD\CMAKEFILES\BA1E9ABFC806DEA4B84DBC6C502F2176\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SD:/Paral_alg/lab1/Algorim_paral -BD:/Paral_alg/lab1/Algorim_paral/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file D:/Paral_alg/lab1/Algorim_paral/build/MyGTestProject.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
