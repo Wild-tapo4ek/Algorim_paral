@@ -40,6 +40,10 @@ void displayStudents(const vector<Student>& database) {
 
 // Функция для вывода студентов в алфавитном порядке
 void displayStudentsAlphabetically(vector<Student>& database) {
+    if (database.empty()) {
+        cout << "База данных пуста.\n";
+        return;
+    }
     
     // Лямбда-функция для сравнения студентов по имени
     auto compareByName = [](const Student& a, const Student& b) {
