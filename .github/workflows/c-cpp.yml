@@ -27,7 +27,7 @@ jobs:
         sudo cp -v *.a /usr/lib || true
     - name: Compile tests
       run: |
-        g++ -std=c++17 tests.cpp -pthread -lgtest -lgtest_main -o tests
+        g++ -std=c++17 test_fun.cpp -pthread -lgtest -lgtest_main -o tests
     - name: Run tests
       run: |
         ./tests
