@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <algorithm>
 using namespace std;
 
 struct Student {
@@ -30,6 +31,29 @@ void addStudent(vector<Student>& database) {
 void displayStudents(const vector<Student>& database) {
     cout << "Список студентов:\n";
     for (const Student& student : database) {
+        cout << "Имя: " << student.name << "\n";
+        cout << "Возраст: " << student.age << "\n";
+        cout << "Специальность: " << student.major << "\n";
+        cout << "Средний балл: " << student.gpa << "\n\n";
+    }
+}
+
+// Функция для вывода студентов в алфавитном порядке
+void displayStudentsAlphabetically(vector<Student>& database) {
+    
+    // Лямбда-функция для сравнения студентов по имени
+    auto compareByName = [](const Student& a, const Student& b) {
+        return a.name < b.name;
+    };
+    
+    // Создаем копию базы данных для сортировки
+    vector<Student> sortedDatabase = database;
+    
+    // Сортируем по имени с помощью лямбда-функции
+    sort(sortedDatabase.begin(), sortedDatabase.end(), compareByName);
+    
+    cout << "Список студентов в алфавитном порядке:\n";
+    for (const Student& student : sortedDatabase) {
         cout << "Имя: " << student.name << "\n";
         cout << "Возраст: " << student.age << "\n";
         cout << "Специальность: " << student.major << "\n";
