@@ -29,7 +29,7 @@ jobs:
     - name: Compile tests with coverage
       run: |
         g++ -std=c++17 -I. --coverage -fprofile-arcs -ftest-coverage \
-            -pthread -lgtest -lgtest_main \
+            -pthread -lgtest \
             test_fun.cpp -o tests
 
     - name: Run tests
