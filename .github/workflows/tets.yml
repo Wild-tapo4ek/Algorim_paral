@@ -2,14 +2,14 @@ name: C/C++ CI with Coverage
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -17,75 +17,70 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential cmake libgtest-dev googletest
+        sudo apt-get install -y build-essential libgtest-dev gcovr
 
-    - name: Build project
+    - name: Build GoogleTest
       run: |
-        mkdir -p build
-        cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Debug
-        make
+        cd /usr/src/googletest
+        sudo cmake .
+        sudo make
+        sudo cp -v *.a /usr/lib || true
 
-    - name: Run tests with coverage
+    - name: Compile tests with coverage
       run: |
-        cd build
-      
-        g++ --coverage -g -O0 -fprofile-arcs -ftest-coverage -I/usr/include/gtest \
-            ../test_fun.cpp -lgtest -lgtest_main -lpthread -o test_runner
-        
-  
-        ./test_runner
-        
-      
-        gcovr --xml cover.xml --root ..
+        g++ -std=c++17 -I. --coverage -fprofile-arcs -ftest-coverage \
+            -pthread -lgtest -lgtest_main \
+            test_fun.cpp -o tests
+
+    - name: Run tests
+      run: |
+        ./tests
 
     - name: Generate coverage report
+      run: |
+        gcovr --xml cover.xml --print-summary .
+        # Извлекаем процент покрытия
+        COVERAGE_PCT=$(gcovr --xml | grep -oP 'line-rate="\K[0-9.]+' | head -1)
+        COVERAGE_PERCENT=$(echo "scale=0; $COVERAGE_PCT * 100 / 1" | bc)
+        echo "COVERAGE=${COVERAGE_PERCENT}%" >> $GITHUB_ENV
+        
+        # Определяем цвет
+        if [ $COVERAGE_PERCENT -ge 90 ]; then
+            echo "COLOR=brightgreen" >> $GITHUB_ENV
+        elif [ $COVERAGE_PERCENT -ge 70 ]; then
+            echo "COLOR=green" >> $GITHUB_ENV
+        elif [ $COVERAGE_PERCENT -ge 50 ]; then
+            echo "COLOR=yellowgreen" >> $GITHUB_ENV
+        elif [ $COVERAGE_PERCENT -ge 30 ]; then
+            echo "COLOR=yellow" >> $GITHUB_ENV
+        elif [ $COVERAGE_PERCENT -ge 10 ]; then
+            echo "COLOR=orange" >> $GITHUB_ENV
+        else
+            echo "COLOR=red" >> $GITHUB_ENV
+        fi
+
+    - name: Update Gist with coverage data
+      uses: schneegans/dynamic-badges-action@v1.7.0
+      with:
+        auth: ${{ secrets.GIST_SECRET }}
+        gistID: '0c003749b19fd7227ff75c6d31ad37e5'
+        filename: 'cover.json'
+        label: 'Code Coverage'
+        message: ${{ env.COVERAGE }}
+        color: ${{ env.COLOR }}
+
+    - name: Generate coverage summary
       uses: irongut/CodeCoverageSummary@v1.3.0
       with:
-        filename: build/cover.xml
+        filename: cover.xml
         badge: true
         fail_below_min: false
         format: markdown
         output: both
-        thresholds: '70 90'
+        thresholds: '60 80'
 
-    - name: Upload coverage report
-      uses: actions/upload-artifact@v4
-      with:
-        name: coverage-report
-        path: build/cover.xml
-
-    - name: Create coverage badge
+    - name: Display coverage results
       run: |
-        COVERAGE=$(grep -oP 'line-rate="\K[0-9.]+' build/cover.xml | head -1)
-        COVERAGE_PERCENT=$(echo "scale=0; $COVERAGE * 100 / 1" | bc)
-        
-        # Определяем цвет
-        if (( $(echo "$COVERAGE_PERCENT >= 90" | bc -l) )); then
-            COLOR="brightgreen"
-        elif (( $(echo "$COVERAGE_PERCENT >= 70" | bc -l) )); then
-            COLOR="green"
-        elif (( $(echo "$COVERAGE_PERCENT >= 50" | bc -l) )); then
-            COLOR="yellow"
-        else
-            COLOR="red"
-        fi
-        
-        echo "COVERAGE=$COVERAGE_PERCENT%" >> $GITHUB_ENV
-        echo "COLOR=$COLOR" >> $GITHUB_ENV
-
-    - name: Update coverage badge
-      uses: schneegans/dynamic-badges-action@v1.7.0
-      with:
-        auth: ${{ secrets.GIST_SECRET }}
-        gistID: 0c003749b19fd7227ff75c6d31ad37e5
-        filename: cover.json
-        label: Test Coverage
-        message: ${{ env.COVERAGE }}
-        color: ${{ env.COLOR }}
-
-    - name: Comment PR with coverage
-      if: github.event_name == 'pull_request'
-      uses: marocchino/sticky-pull-request-comment@v2
-      with:
-        path: code-coverage-results.md
+        echo "Coverage: ${{ env.COVERAGE }}"
+        echo "Color: ${{ env.COLOR }}"
+        cat code-coverage-results.md
