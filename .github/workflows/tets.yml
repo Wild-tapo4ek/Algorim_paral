@@ -1,86 +1,76 @@
-name: C/C++ CI with Coverage
+name: Coverage
 
 on:
   push:
-    branches: ["main"]
+    branches: [ "main" ]
   pull_request:
-    branches: ["main"]
+    branches: [ "main" ]
 
 jobs:
-  build-and-test:
-    runs-on: ubuntu-latest
-
+  build:
+    runs-on: ${{ matrix.os }} # we run many different builds
+    strategy:
+      matrix:
+        os: [ubuntu-latest,macos-latest]
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Install dependencies
+    - uses: actions/checkout@v4
+      #with:
+      #  ref: 'dev' # checkout the dev branch
+    - name: make
+      run: make
+      
+    - name: Test
+      id: test
       run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential libgtest-dev gcovr
+        chmod +x project_part1
+        ./project_part1
 
-    - name: Build GoogleTest
+    - name: Calculate code coverage
+      if: ${{matrix.os == 'ubuntu-latest'}}
+      id: covr
       run: |
-        cd /usr/src/googletest
-        sudo cmake .
-        sudo make
-        sudo cp -v *.a /usr/lib || true
+        sudo apt install -y googletest libgtest-dev build-essential gcovr
+        g++ --coverage -g -O0 -fprofile-arcs -ftest-coverage -I/usr/include/gtest -L/usr/lib/x86_64-linux-gnu test_fun.cpp -lgtest -lpthread
+        chmod +x ./a.out
+        ./a.out
+        gcovr --xml coverage.cobertura.xml
 
-    - name: Compile tests with coverage
-      run: |
-        g++ -std=c++17 -I. --coverage -fprofile-arcs -ftest-coverage \
-            -pthread -lgtest \
-            test_fun.cpp -o tests
-
-    - name: Run tests
-      run: |
-        ./tests
-
-    - name: Generate coverage report
-      run: |
-        gcovr --xml cover.xml --print-summary .
-        # Извлекаем процент покрытия
-        COVERAGE_PCT=$(gcovr --xml | grep -oP 'line-rate="\K[0-9.]+' | head -1)
-        COVERAGE_PERCENT=$(echo "scale=0; $COVERAGE_PCT * 100 / 1" | bc)
-        echo "COVERAGE=${COVERAGE_PERCENT}%" >> $GITHUB_ENV
-        
-        # Определяем цвет
-        if [ $COVERAGE_PERCENT -ge 90 ]; then
-            echo "COLOR=brightgreen" >> $GITHUB_ENV
-        elif [ $COVERAGE_PERCENT -ge 70 ]; then
-            echo "COLOR=green" >> $GITHUB_ENV
-        elif [ $COVERAGE_PERCENT -ge 50 ]; then
-            echo "COLOR=yellowgreen" >> $GITHUB_ENV
-        elif [ $COVERAGE_PERCENT -ge 30 ]; then
-            echo "COLOR=yellow" >> $GITHUB_ENV
-        elif [ $COVERAGE_PERCENT -ge 10 ]; then
-            echo "COLOR=orange" >> $GITHUB_ENV
-        else
-            echo "COLOR=red" >> $GITHUB_ENV
-        fi
-
-    - name: Update Gist with coverage data
-      uses: schneegans/dynamic-badges-action@v1.7.0
-      with:
-        auth: ${{ secrets.GIST_SECRET }}
-        gistID: '0c003749b19fd7227ff75c6d31ad37e5'
-        filename: 'cover.json'
-        label: 'Code Coverage'
-        message: ${{ env.COVERAGE }}
-        color: ${{ env.COLOR }}
-
-    - name: Generate coverage summary
+    - name: Code Coverage Report
+      if: ${{matrix.os == 'ubuntu-latest'}}
       uses: irongut/CodeCoverageSummary@v1.3.0
       with:
-        filename: cover.xml
+        filename: coverage.cobertura.xml
         badge: true
-        fail_below_min: false
+        fail_below_min: true
         format: markdown
+        hide_branch_rate: false
+        hide_complexity: true
+        indicators: true
         output: both
         thresholds: '60 80'
 
-    - name: Display coverage results
+    - name: Add Coverage PR Comment
+      uses: marocchino/sticky-pull-request-comment@v2
+      if: (github.event_name == 'pull_request') && (${{matrix.os == 'ubuntu-latest'}})
+      with:
+        recreate: true
+        path: code-coverage-results.md
+    
+    - name: Get the coverage
+      if: ${{matrix.os == 'ubuntu-latest'}}
+      id: get_coverage
       run: |
-        echo "Coverage: ${{ env.COVERAGE }}"
-        echo "Color: ${{ env.COLOR }}"
         cat code-coverage-results.md
+        COVVALUE="$(grep 'Summary' code-coverage-results.md | awk '{print $3}' | tr -d \*)"
+        echo "COVERAGE=$COVVALUE">> $GITHUB_ENV
+    
+    - name: Create the Badge
+      if: ${{matrix.os == 'ubuntu-latest'}}
+      uses: schneegans/dynamic-badges-action@v1.0.0
+      with:
+        auth: ${{ secrets.GIST_SECRET }}
+        gistID: 0c003749b19fd7227ff75c6d31ad37e5
+        filename: cover.json
+        label: Test Coverage
+        message: ${{ env.COVERAGE }}
+        color: green
