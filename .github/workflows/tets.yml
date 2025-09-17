@@ -22,8 +22,8 @@ jobs:
     - name: Test
       id: test
       run: |
-        chmod +x project_part1
-        ./project_part1
+        chmod +x main
+        ./main
 
     - name: Calculate code coverage
       if: ${{matrix.os == 'ubuntu-latest'}}
