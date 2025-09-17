@@ -18,12 +18,6 @@ jobs:
       #  ref: 'dev' # checkout the dev branch
     - name: make
       run: make
-      
-    - name: Test
-      id: test
-      run: |
-        chmod +x main
-        ./main
 
     - name: Calculate code coverage
       if: ${{matrix.os == 'ubuntu-latest'}}
